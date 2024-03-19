@@ -29,13 +29,14 @@ int readY;
 int dt = 18; // bande morte
 unsigned long last_send = 0; // Derniere valeur de milis lors du send
 int time_loop = 10; //time loops 10 ms For Run 250 ms For Debug
-int coef = 20; // sencibilité
+int coef_rel = 20; // sencibilité
+int coef_abs =20;
 
 // debug
 long debug = 0;
 unsigned long lastdebug = 0;
 
-int calc (int read){
+int calc (int read, int coef){
     if(read > dt + 512){
         return round(-(read - (512 + dt))/coef);
     }
@@ -66,7 +67,7 @@ void anti_rebond()
 
 void absolut_mouse(){
     /* je taff dessu besoin de modifier la fonction calc
-        pour ajouter un argumenent du coef absolu ou relatif 
+        pour ajouter un argumenent du coef_rel absolu ou relatif 
         en abs je doit etre entre 0...32767
     
     */
@@ -74,7 +75,13 @@ void absolut_mouse(){
         last_send = millis(); // rst de Millis()
         readX = analogRead(inputX);
         readY = analogRead(inputY);
-        AbsoluteMouse.moveTo(256,256);
+        int X = calc(readX,1)*coef_abs;
+        int Y =  calc(readY,1)*-1*coef_abs;
+        Serial.print(X);
+        Serial.print(" ");
+        Serial.println(Y);
+        AbsoluteMouse.moveTo(X,Y);
+
 
     }
 
@@ -87,10 +94,10 @@ void relative_mouse(){
       readX = analogRead(inputX);
       readY = analogRead(inputY);
 
-      Mouse.move(calc(readX), calc(readY)*-1);
+      Mouse.move(calc(readX,coef_rel), calc(readY,coef_rel)*-1);
 
-
-      if (calc(readX)>24 || calc(readY)*-1>24) // debug
+/*
+      if (calc(readX,coef_rel)>24 || calc(readY,coef_rel)*-1>24) // debug
       {
           Serial.println(" ");
           Serial.print("Lecture Ana X: ");
@@ -106,8 +113,9 @@ void relative_mouse(){
           Serial.print(read_bp);
           Serial.print(" Etat Bascule : ");
           Serial.println(basc_status);
-      }
+      }*/
   }
+
 }
 
 
