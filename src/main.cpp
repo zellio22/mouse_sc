@@ -91,7 +91,7 @@ void relative_mouse(){
 }
 
 void mode_joystick(){
-    //rien d'autre 
+    //rien d'autre ?
     readX = analogRead(inputX);
     readY = analogRead(inputY);
     Joystick.setXAxis(readX);
