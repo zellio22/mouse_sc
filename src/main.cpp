@@ -1,11 +1,7 @@
 #include <Arduino.h>
 #include <HID-Project.h>
 #include <HID-Settings.h>
-
-
-unsigned int largeur_ecran=2560/2;
-unsigned int hauteur_ecran=1080/2;
-
+#include "Joystick.h"
 
 //def de parametres IO
 int inputX = A1; // entrée Ana X
@@ -15,12 +11,8 @@ int click = 15; // entrée poussoir
 // def des variable global
 
 bool read_bp =false;
-bool etat_debouce  = false;         // etat Bp apres anti rebond
-bool old_etat_debouce  = false;          // Last etat Bp
-
 bool basc_status = true;                // Etat bascule
 bool last_basc_status = true;         // Last etat bascule
-
 
 unsigned long lastrebondTime  = 0;
 unsigned long rebondDelay  = 250;
@@ -35,6 +27,13 @@ int coef_abs =20;
 // debug
 long debug = 0;
 unsigned long lastdebug = 0;
+
+Joystick_ Joystick(JOYSTICK_DEFAULT_REPORT_ID,JOYSTICK_TYPE_GAMEPAD,
+    1, 0,                  // Button Count, Hat Switch Count
+    true, true, false,     // X and Y, but no Z Axis
+    false, false, false,   // No Rx, Ry, or Rz
+    false, false,          // No rudder or throttle
+    false, false, false);  // No accelerator, brake, or steering
 
 int calc (int read, int coef){
     if(read > dt + 512){
@@ -51,14 +50,13 @@ int calc (int read, int coef){
     return 0;
 }
 
-void anti_rebond()
-{
+void anti_rebond(){
+
     read_bp = digitalRead(click);
 
-    if ((millis() - lastrebondTime)>= rebondDelay && read_bp==LOW)
-    {
-        lastrebondTime=millis();
+    if ((millis() - lastrebondTime)>= rebondDelay && read_bp==LOW){
 
+        lastrebondTime=millis();
         basc_status= 1- basc_status;
 
     }
@@ -66,58 +64,39 @@ void anti_rebond()
 }
 
 void absolut_mouse(){
-    /* je taff dessu besoin de modifier la fonction calc
-        pour ajouter un argumenent du coef_rel absolu ou relatif 
-        en abs je doit etre entre 0...32767
-    
+    /* Fonctionne pas avec SC 
     */
     if (millis() >= last_send + time_loop){
+
         last_send = millis(); // rst de Millis()
         readX = analogRead(inputX);
         readY = analogRead(inputY);
         int X = calc(readX,1)*coef_abs;
         int Y =  calc(readY,1)*-1*coef_abs;
-        Serial.print(X);
-        Serial.print(" ");
-        Serial.println(Y);
         AbsoluteMouse.moveTo(X,Y);
-
 
     }
 
 }
 
 void relative_mouse(){
-  if (millis() >= last_send + time_loop)
-  {
-      last_send = millis(); // rst de Millis()
-      readX = analogRead(inputX);
-      readY = analogRead(inputY);
+    if (millis() >= last_send + time_loop){
 
-      Mouse.move(calc(readX,coef_rel), calc(readY,coef_rel)*-1);
+        last_send = millis(); // rst de Millis()
+        readX = analogRead(inputX);
+        readY = analogRead(inputY);
+        Mouse.move(calc(readX,coef_rel), calc(readY,coef_rel)*-1);
 
-/*
-      if (calc(readX,coef_rel)>24 || calc(readY,coef_rel)*-1>24) // debug
-      {
-          Serial.println(" ");
-          Serial.print("Lecture Ana X: ");
-          Serial.print(readX);
-          Serial.print(" Y: ");
-          Serial.println(readY);
-
-          Serial.print("Resultat X: ");
-          Serial.print(calc(readX));
-          Serial.print(" Y: ");
-          Serial.println(calc(readY));
-          Serial.print("Etat BP : ");
-          Serial.print(read_bp);
-          Serial.print(" Etat Bascule : ");
-          Serial.println(basc_status);
-      }*/
   }
-
 }
 
+void mode_joystick(){
+    //rien d'autre 
+    readX = analogRead(inputX);
+    readY = analogRead(inputY);
+    Joystick.setXAxis(readX);
+    Joystick.setYAxis(readY);
+}
 
 void setup ()
 {
@@ -126,20 +105,13 @@ void setup ()
     pinMode(click,INPUT_PULLUP);
     Mouse.begin();
     AbsoluteMouse.begin();
+    Joystick.begin();
+    Joystick.setXAxisRange(0, 1023);
+    Joystick.setYAxisRange(0, 1023);
 }
 
 void loop ()
 {
-/*
-  if (millis() >= lastdebug + 100) // debug qui fait bug la sourie 
-  {
-      lastdebug = millis();
-      Serial.print("Etat BP : ");
-      Serial.print(read);
-      Serial.print(" Etat Bascule : ");
-      Serial.println(basc_status);
-
-  }*/
 
     if (basc_status==true){
         relative_mouse();
@@ -147,7 +119,7 @@ void loop ()
     else{
         absolut_mouse();
     }
-  //relative_mouse();
+
   anti_rebond();
 
 
